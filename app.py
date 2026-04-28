@@ -89,7 +89,7 @@ body { font-family: 'Segoe UI', sans-serif; }
 # Previously in sidebar, now set directly
 news_api_key = ("e7d75fd233ca4ecab76f2f836b70a807")
 gnews_api_key = ("165fbf819994379eefaede8a541491f4")
-model_path = "iamsahhil/fakenews/fake_news_model"
+model_path = "iamsahhil/fakenews"
 high_conf = 0.75
 low_conf = 0.55
 # ──────────────────────────────────────────────
