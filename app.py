@@ -8,39 +8,99 @@ from transformers import pipeline
 # PAGE CONFIG
 # =====================================================
 st.set_page_config(
-    page_title="TruthLens v3",
-    page_icon="🔍",
-    layout="centered"
+    page_title="TruthLens | Cloud-Based Fake News Detection Using NLP",
+    page_icon="🛡️",
+    layout="wide"
 )
 
 # =====================================================
-# CSS
+# MODERN CSS UI
 # =====================================================
 st.markdown("""
 <style>
-.big-box {
-    padding: 20px;
-    border-radius: 14px;
-    margin-top: 10px;
-    margin-bottom: 15px;
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Poppins', sans-serif;
 }
-.fake-box {
-    background: #fff1f2;
-    border-left: 6px solid #ef4444;
+
+.main {
+    background: linear-gradient(135deg,#0f172a,#111827);
+    color:white;
 }
-.real-box {
-    background: #ecfdf5;
-    border-left: 6px solid #22c55e;
+
+.hero-box {
+    padding:30px;
+    border-radius:18px;
+    background: linear-gradient(135deg,#1e293b,#0f172a);
+    color:white;
+    text-align:center;
+    margin-bottom:25px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.25);
 }
-.uncertain-box {
-    background: #fffbeb;
-    border-left: 6px solid #f59e0b;
+
+.hero-title{
+    font-size:38px;
+    font-weight:700;
+    margin-bottom:5px;
 }
+
+.hero-sub{
+    font-size:17px;
+    color:#cbd5e1;
+}
+
+.result-box{
+    padding:22px;
+    border-radius:16px;
+    margin-top:18px;
+    text-align:center;
+    font-size:20px;
+    font-weight:600;
+}
+
+.fake{
+    background:#7f1d1d;
+    color:white;
+}
+
+.real{
+    background:#14532d;
+    color:white;
+}
+
+.uncertain{
+    background:#78350f;
+    color:white;
+}
+
+.metric-card{
+    padding:15px;
+    border-radius:14px;
+    background:#111827;
+    color:white;
+    text-align:center;
+}
+
+.stButton>button{
+    background:linear-gradient(90deg,#2563eb,#06b6d4);
+    color:white;
+    border:none;
+    border-radius:12px;
+    padding:12px;
+    font-weight:600;
+}
+
+.stTextArea textarea{
+    border-radius:12px;
+}
+
+footer {visibility:hidden;}
 </style>
 """, unsafe_allow_html=True)
 
 # =====================================================
-# NEW MODEL (BETTER MODEL)
+# MODEL SETTINGS
 # =====================================================
 MODEL_ID = "jy46604790/Fake-News-Bert-Detect"
 
@@ -64,38 +124,37 @@ def load_model():
     return clf
 
 # =====================================================
-# LABEL FIXER
+# EXTRACT LABELS
 # =====================================================
-def extract_fake_real(raw_scores):
+def extract_scores(raw_scores):
     scores = {x["label"]: x["score"] for x in raw_scores}
 
     if "LABEL_0" in scores and "LABEL_1" in scores:
-        fake_prob = scores["LABEL_0"]
-        real_prob = scores["LABEL_1"]
+        fake = scores["LABEL_0"]
+        real = scores["LABEL_1"]
 
     elif "FAKE" in scores and "REAL" in scores:
-        fake_prob = scores["FAKE"]
-        real_prob = scores["REAL"]
+        fake = scores["FAKE"]
+        real = scores["REAL"]
 
     else:
-        fake_prob = 0.5
-        real_prob = 0.5
+        fake = 0.5
+        real = 0.5
 
-    return fake_prob, real_prob
+    return fake, real
 
 # =====================================================
-# EXTRA FAKE SIGNALS
+# EXTRA SIGNALS
 # =====================================================
-def fake_signals(text):
+def suspicious_signals(text):
     patterns = [
         r"breaking",
         r"secret",
         r"shocking",
         r"share now",
-        r"hidden truth",
-        r"scientists confirm",
-        r"they don't want you to know",
         r"urgent",
+        r"scientists confirm",
+        r"hidden truth",
         r"leaked report"
     ]
 
@@ -103,7 +162,6 @@ def fake_signals(text):
     for p in patterns:
         if re.search(p, text.lower()):
             count += 1
-
     return count
 
 # =====================================================
@@ -112,22 +170,22 @@ def fake_signals(text):
 def classify(text, clf):
     raw = clf(text)[0]
 
-    fake_prob, real_prob = extract_fake_real(raw)
+    fake, real = extract_scores(raw)
 
-    # Boost fake score slightly if suspicious language
-    signals = fake_signals(text)
-    fake_prob += signals * 0.04
-    fake_prob = min(fake_prob, 0.95)
+    sig = suspicious_signals(text)
 
-    total = fake_prob + real_prob
-    fake_prob /= total
-    real_prob /= total
+    fake += sig * 0.03
+    fake = min(fake, 0.95)
 
-    if fake_prob >= FAKE_THRESHOLD:
+    total = fake + real
+    fake /= total
+    real /= total
+
+    if fake >= FAKE_THRESHOLD:
         verdict = "FAKE NEWS"
         css = "fake"
 
-    elif real_prob >= REAL_THRESHOLD:
+    elif real >= REAL_THRESHOLD:
         verdict = "REAL NEWS"
         css = "real"
 
@@ -135,124 +193,116 @@ def classify(text, clf):
         verdict = "UNCERTAIN"
         css = "uncertain"
 
-    confidence = round(max(fake_prob, real_prob) * 100, 1)
+    confidence = round(max(fake, real) * 100, 1)
 
-    return {
-        "verdict": verdict,
-        "css": css,
-        "fake_prob": fake_prob,
-        "real_prob": real_prob,
-        "confidence": confidence,
-        "signals": signals
-    }
+    return verdict, css, fake, real, confidence, sig
 
 # =====================================================
-# UI
+# HERO SECTION
 # =====================================================
-st.title("🔍 TruthLens v3")
-st.caption("AI Fake News Detector using Transformer Model")
+st.markdown("""
+<div class="hero-box">
+<div class="hero-title">🛡️ TruthLens</div>
+<div class="hero-sub">
+Cloud-Based Fake News Detection Using Natural Language Processing
+</div>
+</div>
+""", unsafe_allow_html=True)
 
-with st.spinner("Loading AI model..."):
+# =====================================================
+# LOAD MODEL
+# =====================================================
+with st.spinner("Loading NLP model..."):
     clf = load_model()
 
-st.success("Model Loaded Successfully")
-
-st.markdown("---")
-
-tabs = st.tabs(["🔍 Single Check", "📋 Batch Check"])
+st.success("AI Model Loaded Successfully")
 
 # =====================================================
-# SINGLE
+# TABS
 # =====================================================
-with tabs[0]:
+tab1, tab2 = st.tabs(["🔍 Detect News", "📋 Batch Analysis"])
 
-    example = st.selectbox(
-        "Try Example",
+# =====================================================
+# SINGLE DETECTION
+# =====================================================
+with tab1:
+
+    st.subheader("Check Headline or Article")
+
+    sample = st.selectbox(
+        "Try Sample Input",
         [
             "",
-            "NASA confirms moon is alien spaceship hidden for centuries",
-            "India gained independence on August 15, 1947",
-            "Scientists say tea reverses aging by 10 years",
-            "Federal Reserve kept rates unchanged",
-            "5G towers secretly spread viruses share now"
+            "India gained independence on August 15, 1947.",
+            "NASA confirms moon is alien spaceship.",
+            "Scientists say tea reverses aging by 10 years.",
+            "The central bank kept interest rates unchanged."
         ]
     )
 
     text = st.text_area(
-        "Paste headline or article",
-        value=example,
-        height=180
+        "Paste News Content",
+        value=sample,
+        height=220
     )
 
-    if st.button("Analyse", use_container_width=True):
+    if st.button("🔍 Analyse News", use_container_width=True):
 
         if text.strip():
 
-            result = classify(text, clf)
-
-            if result["css"] == "fake":
-                box = "fake-box"
-                emoji = "❌"
-
-            elif result["css"] == "real":
-                box = "real-box"
-                emoji = "✅"
-
-            else:
-                box = "uncertain-box"
-                emoji = "⚠️"
+            verdict, css, fake, real, conf, sig = classify(text, clf)
 
             st.markdown(
                 f"""
-                <div class="big-box {box}">
-                <h2>{emoji} {result["verdict"]}</h2>
-                <p><b>Confidence:</b> {result["confidence"]}%</p>
+                <div class="result-box {css}">
+                {verdict}<br>
+                Confidence: {conf}%
                 </div>
                 """,
                 unsafe_allow_html=True
             )
 
-            st.subheader("Probability Scores")
-
             c1, c2 = st.columns(2)
 
             with c1:
-                st.write("❌ Fake")
-                st.progress(float(result["fake_prob"]))
-                st.write(f"{result['fake_prob']*100:.1f}%")
+                st.markdown('<div class="metric-card">❌ Fake Probability</div>', unsafe_allow_html=True)
+                st.progress(float(fake))
+                st.write(f"{fake*100:.1f}%")
 
             with c2:
-                st.write("✅ Real")
-                st.progress(float(result["real_prob"]))
-                st.write(f"{result['real_prob']*100:.1f}%")
+                st.markdown('<div class="metric-card">✅ Real Probability</div>', unsafe_allow_html=True)
+                st.progress(float(real))
+                st.write(f"{real*100:.1f}%")
 
-            st.caption(f"Suspicious signals found: {result['signals']}")
+            st.info(f"Suspicious Signals Detected: {sig}")
 
 # =====================================================
 # BATCH
 # =====================================================
-with tabs[1]:
+with tab2:
+
+    st.subheader("Multiple Claim Detection")
 
     batch = st.text_area(
-        "Enter one claim per line",
-        height=220
+        "Enter one news item per line",
+        height=250
     )
 
-    if st.button("Run Batch", use_container_width=True):
-
-        rows = []
+    if st.button("📊 Run Batch Analysis", use_container_width=True):
 
         claims = [x.strip() for x in batch.splitlines() if x.strip()]
 
+        rows = []
+
         for claim in claims:
-            r = classify(claim, clf)
+            verdict, css, fake, real, conf, sig = classify(claim, clf)
 
             rows.append({
                 "Claim": claim,
-                "Verdict": r["verdict"],
-                "Confidence": r["confidence"],
-                "Fake %": round(r["fake_prob"] * 100, 1),
-                "Real %": round(r["real_prob"] * 100, 1)
+                "Verdict": verdict,
+                "Confidence %": conf,
+                "Fake %": round(fake*100,1),
+                "Real %": round(real*100,1)
             })
 
         df = pd.DataFrame(rows)
@@ -260,9 +310,9 @@ with tabs[1]:
         st.dataframe(df, use_container_width=True)
 
         st.download_button(
-            "Download CSV",
+            "⬇ Download Results CSV",
             df.to_csv(index=False),
-            file_name="results.csv",
+            file_name="truthlens_results.csv",
             mime="text/csv"
         )
 
@@ -270,4 +320,4 @@ with tabs[1]:
 # FOOTER
 # =====================================================
 st.markdown("---")
-st.warning("Always verify important claims using trusted sources.")
+st.warning("⚠️ This system is AI-assisted. Always verify important claims from trusted official sources.")
