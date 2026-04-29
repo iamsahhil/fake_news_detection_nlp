@@ -94,10 +94,15 @@ div[data-testid="stButton"] button { border-radius:8px !important; font-weight:6
 # ──────────────────────────────────────────────────────────────────────────────
 # SETTINGS
 # Change MODEL_ID to your own HuggingFace model after you push it:
- from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
-tokenizer = AutoTokenizer.from_pretrained("jy46604790/Fake-News-Bert-Detect")
-model = AutoModelForSequenceClassification.from_pretrained("jy46604790/Fake-News-Bert-Detect")
+tokenizer = AutoTokenizer.from_pretrained(
+    "jy46604790/Fake-News-Bert-Detect"
+)
+
+model = AutoModelForSequenceClassification.from_pretrained(
+    "jy46604790/Fake-News-Bert-Detect"
+)
 # ──────────────────────────────────────────────────────────────────────────────
 MODEL_ID        = "iamsahhil/fakenews"
 FAKE_THRESHOLD  = 0.60
