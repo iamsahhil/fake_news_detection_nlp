@@ -2,29 +2,22 @@ import streamlit as st
 import pandas as pd
 import torch
 import re
-from transformers import (
-    AutoTokenizer,
-    AutoModelForSequenceClassification,
-    pipeline
-)
+from transformers import pipeline
 
 # =====================================================
 # PAGE CONFIG
 # =====================================================
 st.set_page_config(
-    page_title="TruthLens v2",
+    page_title="TruthLens v3",
     page_icon="🔍",
     layout="centered"
 )
 
 # =====================================================
-# CUSTOM CSS
+# CSS
 # =====================================================
 st.markdown("""
 <style>
-body {
-    font-family: Inter, sans-serif;
-}
 .big-box {
     padding: 20px;
     border-radius: 14px;
@@ -43,39 +36,31 @@ body {
     background: #fffbeb;
     border-left: 6px solid #f59e0b;
 }
-.small {
-    font-size: 14px;
-    color: #666;
-}
 </style>
 """, unsafe_allow_html=True)
 
 # =====================================================
-# SETTINGS
+# NEW MODEL (BETTER MODEL)
 # =====================================================
-MODEL_ID = "iamsahhil/fakenews"
+MODEL_ID = "jy46604790/Fake-News-Bert-Detect"
 
-FAKE_THRESHOLD = 0.42
-REAL_THRESHOLD = 0.58
+FAKE_THRESHOLD = 0.50
+REAL_THRESHOLD = 0.50
 
 # =====================================================
 # LOAD MODEL
 # =====================================================
 @st.cache_resource
 def load_model():
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    model = AutoModelForSequenceClassification.from_pretrained(MODEL_ID)
-
     clf = pipeline(
         "text-classification",
-        model=model,
-        tokenizer=tokenizer,
+        model=MODEL_ID,
+        tokenizer=MODEL_ID,
         top_k=None,
         truncation=True,
         max_length=512,
         device=0 if torch.cuda.is_available() else -1
     )
-
     return clf
 
 # =====================================================
@@ -99,7 +84,7 @@ def extract_fake_real(raw_scores):
     return fake_prob, real_prob
 
 # =====================================================
-# OPTIONAL SIGNAL CHECKS
+# EXTRA FAKE SIGNALS
 # =====================================================
 def fake_signals(text):
     patterns = [
@@ -109,7 +94,9 @@ def fake_signals(text):
         r"share now",
         r"hidden truth",
         r"scientists confirm",
-        r"they don't want you to know"
+        r"they don't want you to know",
+        r"urgent",
+        r"leaked report"
     ]
 
     count = 0
@@ -120,17 +107,16 @@ def fake_signals(text):
     return count
 
 # =====================================================
-# MAIN CLASSIFIER
+# CLASSIFIER
 # =====================================================
 def classify(text, clf):
     raw = clf(text)[0]
 
     fake_prob, real_prob = extract_fake_real(raw)
 
-    # small fake boost if suspicious words found
+    # Boost fake score slightly if suspicious language
     signals = fake_signals(text)
-
-    fake_prob += signals * 0.03
+    fake_prob += signals * 0.04
     fake_prob = min(fake_prob, 0.95)
 
     total = fake_prob + real_prob
@@ -163,8 +149,8 @@ def classify(text, clf):
 # =====================================================
 # UI
 # =====================================================
-st.title("🔍 TruthLens v2")
-st.caption("AI Fake News Detector using RoBERTa")
+st.title("🔍 TruthLens v3")
+st.caption("AI Fake News Detector using Transformer Model")
 
 with st.spinner("Loading AI model..."):
     clf = load_model()
@@ -176,7 +162,7 @@ st.markdown("---")
 tabs = st.tabs(["🔍 Single Check", "📋 Batch Check"])
 
 # =====================================================
-# SINGLE CHECK
+# SINGLE
 # =====================================================
 with tabs[0]:
 
@@ -187,7 +173,8 @@ with tabs[0]:
             "NASA confirms moon is alien spaceship hidden for centuries",
             "India gained independence on August 15, 1947",
             "Scientists say tea reverses aging by 10 years",
-            "The Federal Reserve kept interest rates unchanged"
+            "Federal Reserve kept rates unchanged",
+            "5G towers secretly spread viruses share now"
         ]
     )
 
@@ -239,10 +226,10 @@ with tabs[0]:
                 st.progress(float(result["real_prob"]))
                 st.write(f"{result['real_prob']*100:.1f}%")
 
-            st.caption(f"Suspicious signals detected: {result['signals']}")
+            st.caption(f"Suspicious signals found: {result['signals']}")
 
 # =====================================================
-# BATCH CHECK
+# BATCH
 # =====================================================
 with tabs[1]:
 
