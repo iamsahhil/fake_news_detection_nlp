@@ -4,11 +4,9 @@ import torch
 import re
 from transformers import pipeline
 
-# =====================================================
-# PAGE CONFIG
-# =====================================================
+
 st.set_page_config(
-    page_title="TruthLens v3",
+    page_title="Cloud-Based Fake News Detection Using NLP",
     page_icon="🔍",
     layout="centered"
 )
@@ -39,17 +37,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# =====================================================
-# NEW MODEL (BETTER MODEL)
-# =====================================================
+
 MODEL_ID = "jy46604790/Fake-News-Bert-Detect"
 
 FAKE_THRESHOLD = 0.50
 REAL_THRESHOLD = 0.50
 
-# =====================================================
-# LOAD MODEL
-# =====================================================
+
 @st.cache_resource
 def load_model():
     clf = pipeline(
@@ -63,9 +57,6 @@ def load_model():
     )
     return clf
 
-# =====================================================
-# LABEL FIXER
-# =====================================================
 def extract_fake_real(raw_scores):
     scores = {x["label"]: x["score"] for x in raw_scores}
 
@@ -83,9 +74,7 @@ def extract_fake_real(raw_scores):
 
     return fake_prob, real_prob
 
-# =====================================================
-# EXTRA FAKE SIGNALS
-# =====================================================
+
 def fake_signals(text):
     patterns = [
         r"breaking",
@@ -106,15 +95,13 @@ def fake_signals(text):
 
     return count
 
-# =====================================================
-# CLASSIFIER
-# =====================================================
+
 def classify(text, clf):
     raw = clf(text)[0]
 
     fake_prob, real_prob = extract_fake_real(raw)
 
-    # Boost fake score slightly if suspicious language
+   
     signals = fake_signals(text)
     fake_prob += signals * 0.04
     fake_prob = min(fake_prob, 0.95)
@@ -146,11 +133,10 @@ def classify(text, clf):
         "signals": signals
     }
 
-# =====================================================
-# UI
-# =====================================================
-st.title("🔍 TruthLens v3")
-st.caption("AI Fake News Detector using Transformer Model")
+
+
+st.title("Cloud-Based Fake News Detection Using NLP")
+
 
 with st.spinner("Loading AI model..."):
     clf = load_model()
@@ -161,9 +147,7 @@ st.markdown("---")
 
 tabs = st.tabs(["🔍 Single Check", "📋 Batch Check"])
 
-# =====================================================
-# SINGLE
-# =====================================================
+
 with tabs[0]:
 
     example = st.selectbox(
