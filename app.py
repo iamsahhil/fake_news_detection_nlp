@@ -38,7 +38,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-MODEL_ID = "jy46604790/Fake-News-Bert-Detect"
+MODEL_ID = "iamsahhil/Fake-News-Bert-Detect"
 
 FAKE_THRESHOLD = 0.50
 REAL_THRESHOLD = 0.50
